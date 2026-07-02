@@ -1,0 +1,140 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  TENANT
+  OWNER
+  ADMIN
+}
+
+enum ListingStatus {
+  ACTIVE
+  FILLED
+}
+
+enum InterestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum ScoringMethod {
+  LLM
+  FALLBACK
+}
+
+enum NotificationType {
+  HIGH_MATCH_INTEREST
+  INTEREST_ACCEPTED
+  INTEREST_DECLINED
+}
+
+model User {
+  id            String         @id @default(uuid()) @db.Uuid
+  name          String
+  email         String         @unique
+  passwordHash  String
+  role          Role
+  active        Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  profile       TenantProfile?
+  listings      Listing[]
+  matches       Match[]        @relation("TenantMatches")
+  interests     Interest[]     @relation("TenantInterests")
+  messages      Message[]
+  notifications Notification[]
+}
+
+model TenantProfile {
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @unique @db.Uuid
+  preferredLocation String
+  budgetMin         Int
+  budgetMax         Int
+  moveInDate        DateTime @db.Date
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Listing {
+  id               String        @id @default(uuid()) @db.Uuid
+  ownerId          String        @db.Uuid
+  title            String
+  description      String
+  location         String
+  rent             Int
+  availableFrom    DateTime      @db.Date
+  roomType         String
+  furnishingStatus String
+  photos           String[]
+  status           ListingStatus @default(ACTIVE)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  owner             User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  matches           Match[]
+  interests         Interest[]
+
+  @@index([status, location, rent])
+}
+
+model Match {
+  id            String        @id @default(uuid()) @db.Uuid
+  tenantId      String        @db.Uuid
+  listingId     String        @db.Uuid
+  score         Int
+  explanation   String
+  scoringMethod ScoringMethod
+  computedAt    DateTime      @default(now())
+  tenant        User          @relation("TenantMatches", fields: [tenantId], references: [id], onDelete: Cascade)
+  listing       Listing       @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, listingId])
+  @@index([tenantId, score])
+}
+
+model Interest {
+  id          String         @id @default(uuid()) @db.Uuid
+  tenantId    String         @db.Uuid
+  listingId   String         @db.Uuid
+  status      InterestStatus @default(PENDING)
+  createdAt   DateTime       @default(now())
+  respondedAt DateTime?
+  tenant      User           @relation("TenantInterests", fields: [tenantId], references: [id], onDelete: Cascade)
+  listing     Listing        @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  messages    Message[]
+
+  @@unique([tenantId, listingId])
+  @@index([listingId, status])
+}
+
+model Message {
+  id         String   @id @default(uuid()) @db.Uuid
+  interestId String   @db.Uuid
+  senderId   String   @db.Uuid
+  content    String
+  createdAt  DateTime @default(now())
+  interest   Interest @relation(fields: [interestId], references: [id], onDelete: Cascade)
+  sender     User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([interestId, createdAt])
+}
+
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @db.Uuid
+  type      NotificationType
+  payload   Json
+  emailSent Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
