@@ -39,4 +39,4 @@ services:
       - key: CORS_ORIGIN
         value: "*"
       - key: APP_URL
-        sync: false
+        value: https://rent-finder-api.onrender.com

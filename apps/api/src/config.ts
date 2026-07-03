@@ -20,6 +20,6 @@ export const config = z.object({
   SMTP_USER: z.preprocess(blankToUndefined, z.string().optional()),
   SMTP_PASS: z.preprocess(blankToUndefined, z.string().optional()),
   SMTP_FROM: z.string().default("Rent Finder <noreply@example.com>"),
-  APP_URL: z.string().url().default("http://localhost:5173")
+  APP_URL: z.preprocess(blankToUndefined, z.string().url().default("http://localhost:5173"))
 }).parse(process.env);
 
