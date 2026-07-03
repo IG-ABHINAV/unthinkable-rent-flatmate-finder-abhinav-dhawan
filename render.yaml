@@ -11,7 +11,6 @@ services:
     runtime: docker
     dockerfilePath: apps/api/Dockerfile
     dockerContext: .
-    dockerCommand: sh -c "pnpm --filter @rent-finder/api prisma:migrate && node apps/api/dist/server.js"
     envVars:
       - key: PORT
         value: 4000

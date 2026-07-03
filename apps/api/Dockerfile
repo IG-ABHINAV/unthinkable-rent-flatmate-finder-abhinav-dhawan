@@ -20,4 +20,4 @@ COPY --from=builder /app/node_modules ./node_modules
 
 EXPOSE 4000
 ENV NODE_ENV=production
-CMD ["node", "apps/api/dist/server.js"]
+CMD ["sh", "-c", "pnpm --filter @rent-finder/api prisma:migrate && node apps/api/dist/server.js"]
