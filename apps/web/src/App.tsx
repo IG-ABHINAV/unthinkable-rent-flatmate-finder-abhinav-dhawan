@@ -340,6 +340,7 @@ function Browse() {
   const [petsFilter, setPetsFilter] = useState("ALL");
   const [dietFilter, setDietFilter] = useState("ALL");
   const [furnishingFilter, setFurnishingFilter] = useState("ALL");
+  const [allLocations, setAllLocations] = useState<string[]>([]);
 
   async function load(location = "", budgetMin = "", budgetMax = "") {
     setLoading(true);
@@ -357,6 +358,11 @@ function Browse() {
       ]);
       setItems(listings);
       setMyProfile(profile);
+
+      if (!location && !budgetMin && !budgetMax) {
+        const locs = Array.from(new Set(listings.map(x => x.location)));
+        setAllLocations(locs);
+      }
     } catch(e) {
       setError((e as Error).message);
     } finally {
@@ -449,7 +455,12 @@ function Browse() {
         <h3 style={{ margin: "0 0 1rem" }}>Filter Rooms</h3>
         <div className="filters-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "1rem" }}>
           <label>Location
-            <input value={locFilter} onChange={e => setLocFilter(e.target.value)} placeholder="Indiranagar, Koramangala..." />
+            <select value={locFilter} onChange={e => setLocFilter(e.target.value)}>
+              <option value="">Any location</option>
+              {allLocations.map(loc => (
+                <option key={loc} value={loc}>{loc}</option>
+              ))}
+            </select>
           </label>
           <label>Min Budget
             <input type="number" value={minBudget} onChange={e => setMinBudget(e.target.value)} placeholder="Min" />
