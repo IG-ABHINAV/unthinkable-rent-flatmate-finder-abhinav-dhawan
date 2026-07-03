@@ -1012,4 +1012,33 @@ function Admin(){const [stats,setStats]=useState<Record<string,number>>({});cons
 
 function Page({title,intro,children}:{title:string;intro:string;children:React.ReactNode}){return <main className="page"><header className="page-head"><span className="eyebrow">ROOMLY</span><h1>{title}</h1><p>{intro}</p></header>{children}</main>}
 function Shell({user,logout}:{user:User;logout:()=>void}){return <><nav><NavLink className="brand" to="/">roomly<span>.</span></NavLink><div>{user.role==="TENANT"&&<><NavLink to="/">Browse</NavLink><NavLink to="/profile">Preferences</NavLink><NavLink to="/interests">Interests</NavLink></>}{user.role==="OWNER"&&<><NavLink to="/">Listings</NavLink><NavLink to="/interests">Interests</NavLink></>}{user.role==="ADMIN"&&<NavLink to="/">Admin</NavLink>}<button className="ghost" onClick={logout}>Sign out</button></div></nav><Routes><Route path="/" element={user.role==="TENANT"?<Browse/>:user.role==="OWNER"?<OwnerListings/>:<Admin/>}/><Route path="/profile" element={user.role==="TENANT"?<Profile/>:<Navigate to="/"/>}/><Route path="/interests" element={<Interests user={user}/>}/><Route path="/chat/:id" element={<Chat/>}/><Route path="*" element={<Navigate to="/"/>}/></Routes></>}
-export function App(){const [user,setUser]=useState<User|null>(null);const [ready,setReady]=useState(false);useEffect(()=>{if(!getToken()){setReady(true);return}api<User>("/auth/me").then(setUser).catch(clearToken).finally(()=>setReady(true))},[]);if(!ready)return <div className="loading">roomly<span>.</span></div>;if(!user)return <Routes><Route path="/register" element={<Auth mode="register" onAuth={setUser}/>}/><Route path="*" element={<Auth mode="login" onAuth={setUser}/>}/></Routes>;return <Shell user={user} logout={()=>{clearToken();setUser(null)}}/>}
+function Footer() {
+  return (
+    <footer style={{
+      textAlign: "center",
+      padding: "2rem 1.5rem",
+      borderTop: "1px solid var(--line)",
+      marginTop: "3rem",
+      fontSize: "0.85rem",
+      color: "#65716c",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      gap: "0.75rem",
+      background: "#fdfdfb"
+    }}>
+      <div style={{ display: "flex", justifyContent: "center", gap: "1.5rem", flexWrap: "wrap" }}>
+        <a href="https://unthinkable-rent-flatmate-finder-abhinav-dhawan.vercel.app" target="_blank" rel="noopener noreferrer" style={{ color: "var(--green)", fontWeight: 700, textDecoration: "none", display: "flex", alignItems: "center", gap: "0.25rem" }}>
+          <span>🌐</span> Live Frontend (Vercel)
+        </a>
+        <a href="https://rent-finder-api.onrender.com/api/health" target="_blank" rel="noopener noreferrer" style={{ color: "var(--green)", fontWeight: 700, textDecoration: "none", display: "flex", alignItems: "center", gap: "0.25rem" }}>
+          <span>⚙️</span> Live Backend API (Render)
+        </a>
+      </div>
+      <p style={{ margin: 0, color: "#8a9990" }}>Roomly Rent & Flatmate Finder © 2026 · All Systems Fully Operational</p>
+    </footer>
+  );
+}
+
+export function App(){const [user,setUser]=useState<User|null>(null);const [ready,setReady]=useState(false);useEffect(()=>{if(!getToken()){setReady(true);return}api<User>("/auth/me").then(setUser).catch(clearToken).finally(()=>setReady(true))},[]);if(!ready)return <div className="loading">roomly<span>.</span></div>;if(!user)return <><Routes><Route path="/register" element={<Auth mode="register" onAuth={setUser}/>}/><Route path="*" element={<Auth mode="login" onAuth={setUser}/>}/></Routes><Footer /></>;return <><Shell user={user} logout={()=>{clearToken();setUser(null)}}/><Footer /></>}
+

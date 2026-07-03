@@ -6,7 +6,9 @@ import { db } from "./db.js";
 import { parseToken, type AuthUser } from "./middleware/auth.js";
 
 export function createSocketServer(server: HttpServer) {
-  const io = new Server(server, { cors: { origin: config.CORS_ORIGIN.split(","), credentials: true } });
+  const origins = config.CORS_ORIGIN.split(",").map(o => o.trim());
+  const corsOrigin = origins.includes("*") ? true : origins;
+  const io = new Server(server, { cors: { origin: corsOrigin, credentials: true } });
   io.use((socket, next) => {
     try { socket.data.user = parseToken(z.string().parse(socket.handshake.auth.token)); next(); }
     catch { next(new Error("Authentication failed")); }

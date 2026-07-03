@@ -7,7 +7,7 @@ export const config = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   DATABASE_URL: z.string().min(1),
   JWT_SECRET: z.string().min(32),
-  CORS_ORIGIN: z.string().default("http://localhost:5173"),
+  CORS_ORIGIN: z.string().default("http://localhost:5173,http://localhost:5174"),
   LLM_API_KEY: z.preprocess(blankToUndefined, z.string().optional()),
   LLM_BASE_URL: z.preprocess(blankToUndefined, z.string().optional()),
   LLM_MODEL: z.string().default("gpt-4o-mini"),
