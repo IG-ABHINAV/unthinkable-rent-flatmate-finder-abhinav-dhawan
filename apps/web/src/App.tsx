@@ -28,13 +28,163 @@ type Interest = { id: string; status: string; listing: Listing; tenant: { id: st
 const money = (n: number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
 
 function Auth({ mode, onAuth }: { mode: "login" | "register"; onAuth: (user: User) => void }) {
-  const navigate = useNavigate(); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
+  const navigate = useNavigate();
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
   async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setBusy(true); setError(""); const values = Object.fromEntries(new FormData(event.currentTarget));
-    try { const result = await api<{ user: User; token: string }>(`/auth/${mode}`, { method: "POST", body: JSON.stringify(values) }); saveToken(result.token); onAuth(result.user); navigate("/"); }
-    catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    const values = Object.fromEntries(new FormData(event.currentTarget));
+    try {
+      const result = await api<{ user: User; token: string }>(`/auth/${mode}`, { method: "POST", body: JSON.stringify(values) });
+      saveToken(result.token);
+      onAuth(result.user);
+      navigate("/");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
   }
-  return <main className="auth"><section className="auth-copy"><span className="eyebrow">SMARTER RENTING</span><h1>A room is only right when the fit feels right.</h1><p>Roomly matches homes and people using budget, location and timing—not endless scrolling.</p></section><form className="card form" onSubmit={submit}><h2>{mode === "login" ? "Welcome back" : "Create your account"}</h2>{mode === "register" && <><label>Name<input name="name" required minLength={2}/></label><label>I am a<select name="role"><option value="TENANT">Tenant</option><option value="OWNER">Room owner</option></select></label></>}<label>Email<input name="email" type="email" required/></label><label>Password<input name="password" type="password" minLength={8} required/></label>{error && <p className="error">{error}</p>}<button disabled={busy}>{busy ? "Please wait…" : mode === "login" ? "Sign in" : "Join Roomly"}</button><p>{mode === "login" ? <>New here? <NavLink to="/register">Create an account</NavLink></> : <>Already a member? <NavLink to="/login">Sign in</NavLink></>}</p></form></main>;
+
+  return (
+    <main className="auth">
+      {/* ── Left panel ─────────────────────────────────── */}
+      <section className="auth-copy">
+        <span className="eyebrow">SMARTER RENTING · PAN-INDIA</span>
+        <h1>A room is only right when the fit feels right.</h1>
+        <p>Roomly matches homes and people using budget, location, lifestyle and timing — not endless scrolling.</p>
+
+        {/* Stats row */}
+        <div className="auth-stats">
+          <div className="auth-stat">
+            <strong>12,000+</strong>
+            <span>Active listings</span>
+          </div>
+          <div className="auth-stat">
+            <strong>85,000+</strong>
+            <span>Happy tenants</span>
+          </div>
+          <div className="auth-stat">
+            <strong>94%</strong>
+            <span>Match accuracy</span>
+          </div>
+          <div className="auth-stat">
+            <strong>8 days</strong>
+            <span>Avg. to fill</span>
+          </div>
+        </div>
+
+        {/* Feature highlights */}
+        <ul className="auth-features">
+          <li>
+            <span className="auth-feat-icon">🤖</span>
+            <div>
+              <strong>AI-powered match scores</strong>
+              <span>Every listing ranked with a clear explanation</span>
+            </div>
+          </li>
+          <li>
+            <span className="auth-feat-icon">📍</span>
+            <div>
+              <strong>Neighbourhood-first search</strong>
+              <span>Filter by micro-location across 20+ cities</span>
+            </div>
+          </li>
+          <li>
+            <span className="auth-feat-icon">💬</span>
+            <div>
+              <strong>Private real-time chat</strong>
+              <span>Connect directly once interest is accepted</span>
+            </div>
+          </li>
+          <li>
+            <span className="auth-feat-icon">🔒</span>
+            <div>
+              <strong>Zero brokerage</strong>
+              <span>No middlemen, no hidden fees</span>
+            </div>
+          </li>
+        </ul>
+
+        {/* Mini testimonial */}
+        <div className="auth-testimonial">
+          <p>"Found my perfect 1BHK in Koramangala in 3 days. The AI score was spot on."</p>
+          <div className="auth-testimonial-author">
+            <div className="auth-avatar">RM</div>
+            <div>
+              <strong>Riya Menon</strong>
+              <span>Software Engineer, Bangalore · ★★★★★</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Trust badges */}
+        <div className="auth-trust">
+          <span>✅ Verified listings</span>
+          <span>🏙️ Bangalore · Mumbai · Delhi</span>
+          <span>🆓 Free to join</span>
+        </div>
+      </section>
+
+      {/* ── Right panel (form) ─────────────────────────── */}
+      <form className="card form" onSubmit={submit}>
+        <div>
+          <h2>{mode === "login" ? "Welcome back" : "Create your account"}</h2>
+          <p style={{ color: "#65716c", fontSize: ".9rem", marginTop: ".25rem" }}>
+            {mode === "login"
+              ? "Sign in to see your personalised matches."
+              : "Join 85,000+ tenants finding their perfect room."}
+          </p>
+        </div>
+
+        {mode === "register" && (
+          <>
+            <label>
+              Full name
+              <input name="name" required minLength={2} placeholder="e.g. Priya Sharma" />
+            </label>
+            <label>
+              I am a
+              <select name="role">
+                <option value="TENANT">Tenant – looking for a room</option>
+                <option value="OWNER">Owner – listing my room</option>
+              </select>
+            </label>
+          </>
+        )}
+
+        <label>
+          Email address
+          <input name="email" type="email" required placeholder="you@example.com" />
+        </label>
+        <label>
+          Password
+          <input name="password" type="password" minLength={8} required placeholder="Min. 8 characters" />
+        </label>
+
+        {error && <p className="error">⚠ {error}</p>}
+
+        <button disabled={busy} style={{ marginTop: ".25rem" }}>
+          {busy ? "Please wait…" : mode === "login" ? "Sign in →" : "Join Roomly →"}
+        </button>
+
+        <p style={{ textAlign: "center", fontSize: ".88rem" }}>
+          {mode === "login"
+            ? <><span style={{ color: "#65716c" }}>New here?</span> <NavLink to="/register">Create a free account</NavLink></>
+            : <><span style={{ color: "#65716c" }}>Already a member?</span> <NavLink to="/login">Sign in</NavLink></>}
+        </p>
+
+        {mode === "register" && (
+          <p style={{ fontSize: ".78rem", color: "#8a9990", textAlign: "center", borderTop: "1px solid var(--line)", paddingTop: ".75rem", marginTop: ".25rem" }}>
+            By creating an account you agree to our Terms of Service and Privacy Policy.
+          </p>
+        )}
+      </form>
+    </main>
+  );
 }
 
 function Profile() {

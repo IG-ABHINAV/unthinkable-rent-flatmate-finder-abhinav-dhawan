@@ -89,7 +89,16 @@ export function fallbackScore(listing: ScoreInput, profile: ProfileInput) {
 
 async function llmScore(listing: ScoreInput, profile: ProfileInput) {
   if (!config.LLM_API_KEY) throw new Error("LLM is not configured");
-  const client = new OpenAI({ apiKey: config.LLM_API_KEY, timeout: 8_000, maxRetries: 1 });
+  const client = new OpenAI({
+    apiKey: config.LLM_API_KEY,
+    baseURL: config.LLM_BASE_URL || undefined,
+    defaultHeaders: {
+      "HTTP-Referer": "https://github.com/IG-ABHINAV/unthinkable-rent-flatmate-finder-abhinav-dhawan",
+      "X-Title": "Roomly Finder",
+    },
+    timeout: 8_000,
+    maxRetries: 1
+  });
   const completion = await client.chat.completions.create({
     model: config.LLM_MODEL,
     response_format: { type: "json_object" },

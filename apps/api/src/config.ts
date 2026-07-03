@@ -9,6 +9,7 @@ export const config = z.object({
   JWT_SECRET: z.string().min(32),
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
   LLM_API_KEY: z.preprocess(blankToUndefined, z.string().optional()),
+  LLM_BASE_URL: z.preprocess(blankToUndefined, z.string().optional()),
   LLM_MODEL: z.string().default("gpt-4o-mini"),
   SMTP_HOST: z.preprocess(blankToUndefined, z.string().optional()),
   SMTP_PORT: z.coerce.number().int().positive().default(587),

@@ -25,8 +25,10 @@ services:
         generateValue: true
       - key: LLM_API_KEY
         sync: false
+      - key: LLM_BASE_URL
+        value: https://openrouter.ai/api/v1
       - key: LLM_MODEL
-        value: gpt-4o-mini
+        value: nvidia/llama-3.1-nemotron-70b-instruct:free
       - key: CORS_ORIGIN
         value: "*"
       - key: APP_URL

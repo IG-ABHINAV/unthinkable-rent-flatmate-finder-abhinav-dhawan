@@ -112,3 +112,117 @@
   background: #f8d7da;
   border: 2px solid #dc3545;
 }
+
+/* ── Auth left panel additions ───────────────────────────────────────────── */
+.auth-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .75rem;
+  margin: 1.75rem 0 0;
+  padding: 1.25rem 0;
+  border-top: 1px solid rgba(45,106,79,.18);
+  border-bottom: 1px solid rgba(45,106,79,.18);
+}
+.auth-stat strong {
+  display: block;
+  font: 800 1.45rem 'Manrope', sans-serif;
+  color: var(--ink);
+  letter-spacing: -.03em;
+}
+.auth-stat span {
+  font-size: .73rem;
+  color: #65716c;
+  font-weight: 500;
+}
+
+.auth-features {
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: .9rem;
+}
+.auth-features li {
+  display: flex;
+  align-items: flex-start;
+  gap: .85rem;
+}
+.auth-feat-icon {
+  font-size: 1.15rem;
+  flex-shrink: 0;
+  margin-top: .05rem;
+}
+.auth-features li > div {
+  display: flex;
+  flex-direction: column;
+  gap: .1rem;
+}
+.auth-features li strong {
+  font-size: .9rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+.auth-features li span {
+  font-size: .8rem;
+  color: #65716c;
+}
+
+.auth-testimonial {
+  margin-top: 1.75rem;
+  padding: 1.1rem 1.25rem;
+  background: rgba(255,255,255,.55);
+  border: 1px solid rgba(45,106,79,.15);
+  border-radius: 14px;
+  backdrop-filter: blur(6px);
+}
+.auth-testimonial > p {
+  font-size: .88rem;
+  color: var(--ink);
+  font-style: italic;
+  margin: 0 0 .85rem;
+  line-height: 1.55;
+}
+.auth-testimonial-author {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+}
+.auth-avatar {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: var(--lime);
+  color: var(--ink);
+  font: 700 .75rem 'Manrope', sans-serif;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.auth-testimonial-author strong {
+  display: block;
+  font-size: .83rem;
+  color: var(--ink);
+}
+.auth-testimonial-author span {
+  font-size: .73rem;
+  color: #65716c;
+}
+
+.auth-trust {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+  margin-top: 1.25rem;
+}
+.auth-trust span {
+  font-size: .75rem;
+  font-weight: 600;
+  color: #4a6658;
+  background: rgba(45,106,79,.07);
+  border: 1px solid rgba(45,106,79,.14);
+  border-radius: 99px;
+  padding: .3rem .8rem;
+}
+
+@media (max-width: 900px) {
+  .auth-stats { grid-template-columns: repeat(2, 1fr); }
+}
