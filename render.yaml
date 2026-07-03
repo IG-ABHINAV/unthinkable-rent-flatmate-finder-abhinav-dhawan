@@ -29,6 +29,14 @@ services:
         value: https://openrouter.ai/api/v1
       - key: LLM_MODEL
         value: nvidia/llama-3.1-nemotron-70b-instruct:free
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-1.5-flash
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: nvidia/llama-3.1-nemotron-70b-instruct:free
       - key: CORS_ORIGIN
         value: "*"
       - key: APP_URL

@@ -88,27 +88,70 @@ export function fallbackScore(listing: ScoreInput, profile: ProfileInput) {
 }
 
 async function llmScore(listing: ScoreInput, profile: ProfileInput) {
-  if (!config.LLM_API_KEY) throw new Error("LLM is not configured");
-  const client = new OpenAI({
-    apiKey: config.LLM_API_KEY,
-    baseURL: config.LLM_BASE_URL || undefined,
-    defaultHeaders: {
-      "HTTP-Referer": "https://github.com/IG-ABHINAV/unthinkable-rent-flatmate-finder-abhinav-dhawan",
-      "X-Title": "Roomly Finder",
-    },
-    timeout: 8_000,
-    maxRetries: 1
-  });
-  const completion = await client.chat.completions.create({
-    model: config.LLM_MODEL,
-    response_format: { type: "json_object" },
-    messages: [
-      { role: "system", content: "You are a professional flatmate matching assistant. Calculate compatibility from 0 to 100 between a tenant and a room listing. Return a JSON object with keys: score (number) and explanation (string, max 600 chars). The explanation should be a concise, friendly, and structured summary detailing why they are a good fit or if there are conflicts, highlighting shared hobbies, budget, location, and lifestyle habits." },
-      { role: "user", content: `Room listing: ${JSON.stringify(listing)}\nTenant profile: ${JSON.stringify(profile)}\n\nRequirements:\n1. If listing genderPreference is not "ANY", and tenant gender is not "ANY", and they do not match, score MUST be 0 and explanation must state the gender mismatch.\n2. Consider budget alignment, location proximity, smoking preference, pet allowance, vegetarian/non-vegetarian alignment, sleeping patterns, and shared hobbies/interests. Shared interests should boost the score.\n3. Return JSON: { \"score\": number, \"explanation\": string }` }
-    ]
-  });
-  const parsed = responseSchema.parse(JSON.parse(completion.choices[0]?.message.content ?? ""));
-  return { ...parsed, score: Math.round(parsed.score), scoringMethod: "LLM" as const };
+  const activeProviders = [];
+  if (config.GEMINI_API_KEY) {
+    activeProviders.push({
+      name: "Gemini",
+      apiKey: config.GEMINI_API_KEY,
+      baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+      model: config.GEMINI_MODEL
+    });
+  }
+  if (config.OPENROUTER_API_KEY) {
+    activeProviders.push({
+      name: "OpenRouter",
+      apiKey: config.OPENROUTER_API_KEY,
+      baseURL: "https://openrouter.ai/api/v1",
+      model: config.OPENROUTER_MODEL
+    });
+  }
+  if (config.LLM_API_KEY) {
+    const hasSameKey = activeProviders.some(p => p.apiKey === config.LLM_API_KEY);
+    if (!hasSameKey) {
+      activeProviders.push({
+        name: "GenericLLM",
+        apiKey: config.LLM_API_KEY,
+        baseURL: config.LLM_BASE_URL || undefined,
+        model: config.LLM_MODEL
+      });
+    }
+  }
+
+  if (activeProviders.length === 0) {
+    throw new Error("No LLM providers are configured");
+  }
+
+  let lastError: unknown;
+  for (const provider of activeProviders) {
+    try {
+      console.log(`Attempting LLM scoring with provider: ${provider.name} (${provider.model})`);
+      const client = new OpenAI({
+        apiKey: provider.apiKey,
+        baseURL: provider.baseURL,
+        defaultHeaders: {
+          "HTTP-Referer": "https://github.com/IG-ABHINAV/unthinkable-rent-flatmate-finder-abhinav-dhawan",
+          "X-Title": "Roomly Finder",
+        },
+        timeout: 8_000,
+        maxRetries: 1
+      });
+      const completion = await client.chat.completions.create({
+        model: provider.model,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: "You are a professional flatmate matching assistant. Calculate compatibility from 0 to 100 between a tenant and a room listing. Return a JSON object with keys: score (number) and explanation (string, max 600 chars). The explanation should be a concise, friendly, and structured summary detailing why they are a good fit or if there are conflicts, highlighting shared hobbies, budget, location, and lifestyle habits." },
+          { role: "user", content: `Room listing: ${JSON.stringify(listing)}\nTenant profile: ${JSON.stringify(profile)}\n\nRequirements:\n1. If listing genderPreference is not "ANY", and tenant gender is not "ANY", and they do not match, score MUST be 0 and explanation must state the gender mismatch.\n2. Consider budget alignment, location proximity, smoking preference, pet allowance, vegetarian/non-vegetarian alignment, sleeping patterns, and shared hobbies/interests. Shared interests should boost the score.\n3. Return JSON: { \"score\": number, \"explanation\": string }` }
+        ]
+      });
+      const parsed = responseSchema.parse(JSON.parse(completion.choices[0]?.message.content ?? ""));
+      return { ...parsed, score: Math.round(parsed.score), scoringMethod: "LLM" as const };
+    } catch (err) {
+      console.warn(`LLM provider ${provider.name} failed:`, err instanceof Error ? err.message : err);
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error("All LLM providers failed");
 }
 
 export async function scoreListing(tenantId: string, listingId: string) {
