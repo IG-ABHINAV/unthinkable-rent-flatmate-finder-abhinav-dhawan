@@ -368,9 +368,18 @@ function Browse() {
 
   const [interestModalListingId, setInterestModalListingId] = useState<string | null>(null);
   const [interestMessage, setInterestMessage] = useState("");
+  const [selectedTemplate, setSelectedTemplate] = useState("template1");
   const [interestMoveInDate, setInterestMoveInDate] = useState("");
   const [interestStayDuration, setInterestStayDuration] = useState("");
   const [interestQuickNotes, setInterestQuickNotes] = useState<string[]>([]);
+
+  const messageTemplates = [
+    { value: "template1", label: "General Interest", text: "Hello! I am very interested in your room listing and would love to connect to discuss details." },
+    { value: "template2", label: "Clean & Tidy Professional", text: "Hi! I am a clean, responsible professional looking for a quiet and comfortable place to stay. Let's chat!" },
+    { value: "template3", label: "Schedule a Visit", text: "Hello there, your listing matches my search preferences perfectly. I would love to schedule a visit to check it out." },
+    { value: "template4", label: "Long-Term Friendly Flatmate", text: "Hi, I love the look of your flat and share similar interests! I am looking for a long-term stay. Hope to hear from you!" },
+    { value: "custom", label: "Write a Custom Message...", text: "" }
+  ];
 
   const quickNotesOptions = [
     "Ready to move in immediately",
@@ -385,12 +394,21 @@ function Browse() {
   async function submitInterest(e: React.FormEvent) {
     e.preventDefault();
     if (!interestModalListingId) return;
+
+    let finalMessage = "";
+    if (selectedTemplate === "custom") {
+      finalMessage = interestMessage;
+    } else {
+      const template = messageTemplates.find(t => t.value === selectedTemplate);
+      finalMessage = template ? template.text : "";
+    }
+
     try {
       await api("/interests", {
         method: "POST",
         body: JSON.stringify({
           listingId: interestModalListingId,
-          message: interestMessage || undefined,
+          message: finalMessage || undefined,
           moveInDate: interestMoveInDate || undefined,
           stayDuration: interestStayDuration ? Number(interestStayDuration) : undefined,
           quickNotes: interestQuickNotes
@@ -399,6 +417,7 @@ function Browse() {
       alert("Interest sent to the owner!");
       setInterestModalListingId(null);
       setInterestMessage("");
+      setSelectedTemplate("template1");
       setInterestMoveInDate("");
       setInterestStayDuration("");
       setInterestQuickNotes([]);
@@ -666,15 +685,31 @@ function Browse() {
               </div>
 
               <label style={{ display: "flex", flexDirection: "column", gap: "0.4rem", fontWeight: 600 }}>
-                Personal Message
-                <textarea
-                  placeholder="Introduce yourself to the owner..."
-                  value={interestMessage}
-                  onChange={e => setInterestMessage(e.target.value)}
-                  style={{ minHeight: "100px", resize: "vertical", width: "100%", padding: "0.5rem", borderRadius: "6px", border: "1px solid #ccc", boxSizing: "border-box" }}
-                  maxLength={1000}
-                />
+                Select Message Template
+                <select
+                  value={selectedTemplate}
+                  onChange={e => setSelectedTemplate(e.target.value)}
+                  style={{ padding: "0.5rem", borderRadius: "6px", border: "1px solid #ccc" }}
+                >
+                  {messageTemplates.map(t => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
               </label>
+
+              {selectedTemplate === "custom" && (
+                <label style={{ display: "flex", flexDirection: "column", gap: "0.4rem", fontWeight: 600 }}>
+                  Custom Message
+                  <textarea
+                    placeholder="Introduce yourself to the owner..."
+                    value={interestMessage}
+                    onChange={e => setInterestMessage(e.target.value)}
+                    style={{ minHeight: "100px", resize: "vertical", width: "100%", padding: "0.5rem", borderRadius: "6px", border: "1px solid #ccc", boxSizing: "border-box" }}
+                    maxLength={1000}
+                    required
+                  />
+                </label>
+              )}
               
               <div style={{ display: "flex", gap: "1rem", marginTop: "1rem", borderTop: "1px solid #eee", paddingTop: "1.2rem" }}>
                 <button type="button" className="secondary" onClick={() => setInterestModalListingId(null)} style={{ flex: 1 }}>Cancel</button>
