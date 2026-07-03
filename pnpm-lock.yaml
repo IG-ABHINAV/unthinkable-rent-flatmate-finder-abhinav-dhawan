@@ -40,6 +40,9 @@ importers:
       socket.io:
         specifier: ^4.8.1
         version: 4.8.3
+      tsx:
+        specifier: ^4.20.3
+        version: 4.22.4
       zod:
         specifier: ^3.25.67
         version: 3.25.76
@@ -59,9 +62,6 @@ importers:
       '@types/nodemailer':
         specifier: ^6.4.17
         version: 6.4.24
-      tsx:
-        specifier: ^4.20.3
-        version: 4.22.4
       typescript:
         specifier: ^5.8.3
         version: 5.9.3

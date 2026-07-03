@@ -7,13 +7,13 @@ import { createSocketServer } from "./socket.js";
 
 async function start() {
   try {
-    const userCount = await db.user.count();
-    if (userCount === 0) {
-      console.log("Database is empty. Seeding database automatically...");
-      execSync("pnpm --filter @rent-finder/api prisma:seed", { stdio: "inherit" });
+    const listingCount = await db.listing.count();
+    if (listingCount === 0) {
+      console.log("No listings found. Seeding database automatically...");
+      execSync("npx tsx apps/api/prisma/seed.ts", { stdio: "inherit" });
       console.log("Seeding complete.");
     } else {
-      console.log(`Database has ${userCount} users. Skipping seeding.`);
+      console.log(`Database has ${listingCount} listings. Skipping seeding.`);
     }
   } catch (error) {
     console.error("Database bootstrap check/seed failed:", error);

@@ -412,6 +412,10 @@ async function main() {
       tenantId: tenantAbhinav.id,
       listingId: listingVikram1.id,
       status: InterestStatus.ACCEPTED,
+      message: "Hey Vikram! I'm a software developer who loves gaming and cooking. Your penthouse looks amazing and I'd love to check it out. I have a friendly Golden Retriever — hope that's cool!",
+      moveInDate: new Date("2026-08-01"),
+      stayDuration: 12,
+      quickNotes: ["Ready to move in immediately", "Pet lover", "Non-smoker"],
     },
   });
 
@@ -420,6 +424,10 @@ async function main() {
       tenantId: tenantPriya.id,
       listingId: listingAnita1.id,
       status: InterestStatus.PENDING,
+      message: "Hi Anita! I'm a vegetarian female professional looking for a clean, quiet living space. Your listing in Koramangala is exactly what I've been searching for. I love yoga and reading — sounds like we'd get along great!",
+      moveInDate: new Date("2026-07-15"),
+      stayDuration: 18,
+      quickNotes: ["Quiet & clean flatmate", "Vegetarian friendly", "Non-smoker"],
     },
   });
 
@@ -428,6 +436,47 @@ async function main() {
       tenantId: tenantSneha.id,
       listingId: listingRohan2.id,
       status: InterestStatus.PENDING,
+      message: "Hello! I'm Sneha, a music enthusiast and travel lover. The luxury room near Indiranagar Metro sounds perfect for my commute. I'm very tidy and would love to schedule a visit!",
+      moveInDate: new Date("2026-08-10"),
+      stayDuration: 12,
+      quickNotes: ["Ready to move in immediately", "Open to shared chores", "Quiet & clean flatmate"],
+    },
+  });
+
+  // Additional interest records for richer demo data
+  await prisma.interest.create({
+    data: {
+      tenantId: tenantKabir.id,
+      listingId: listingRohan1.id,
+      status: InterestStatus.ACCEPTED,
+      message: "Hey Rohan! Budget-friendly and close to my office in HSR — perfect combo. I'm into sports and gaming, happy to split chores. Let's connect!",
+      moveInDate: new Date("2026-07-20"),
+      stayDuration: 6,
+      quickNotes: ["Ready to move in immediately", "Open to shared chores"],
+    },
+  });
+
+  await prisma.interest.create({
+    data: {
+      tenantId: tenantPooja.id,
+      listingId: listingAnita2.id,
+      status: InterestStatus.PENDING,
+      message: "Hi! The modern studio in Koramangala 5th Block looks stunning. I'm an artist and the rooftop garden would be amazing for my creative work. Would love to visit!",
+      moveInDate: new Date("2026-07-25"),
+      stayDuration: 24,
+      quickNotes: ["Quiet & clean flatmate", "Vegetarian friendly", "Pet lover"],
+    },
+  });
+
+  await prisma.interest.create({
+    data: {
+      tenantId: tenantAbhinav.id,
+      listingId: listingRohan2.id,
+      status: InterestStatus.PENDING,
+      message: "The luxury room near Indiranagar Metro caught my eye — I work hybrid and the metro proximity is a huge plus. I'm neat, enjoy cooking, and have a friendly dog.",
+      moveInDate: new Date("2026-08-01"),
+      stayDuration: 12,
+      quickNotes: ["Pet lover", "Non-smoker", "Okay with late night study/work"],
     },
   });
 
