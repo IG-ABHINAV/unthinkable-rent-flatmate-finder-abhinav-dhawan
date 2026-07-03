@@ -29,3 +29,8 @@ authRouter.get("/me", requireAuth, asyncRoute(async (req, res) => {
   if (!user?.active) throw new HttpError(401, "Account unavailable");
   res.json(user);
 }));
+
+authRouter.get("/notifications", requireAuth, asyncRoute(async (req, res) => {
+  res.json(await db.notification.findMany({ where: { userId: req.user!.id }, orderBy: { createdAt: "desc" } }));
+}));
+

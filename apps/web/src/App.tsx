@@ -1,9 +1,29 @@
 import { FormEvent, useEffect, useState } from "react";
 import { NavLink, Navigate, Route, Routes, useNavigate, useParams } from "react-router-dom";
 import { io } from "socket.io-client";
-import { api, clearToken, getToken, saveToken, type User } from "./api";
+import { api, clearToken, getToken, saveToken, type User, API_URL } from "./api";
 
-type Listing = { id: string; title: string; description: string; location: string; rent: number; availableFrom: string; roomType: string; furnishingStatus: string; photos: string[]; status: string; match?: { score: number; explanation: string; scoringMethod: string } };
+type Listing = {
+  id: string;
+  title: string;
+  description: string;
+  location: string;
+  rent: number;
+  availableFrom: string;
+  roomType: string;
+  furnishingStatus: string;
+  photos: string[];
+  genderPreference: string;
+  smokingAllowed: boolean;
+  petsAllowed: boolean;
+  dietaryPolicy: string;
+  sleepHabitAllowed: string;
+  amenities: string[];
+  roommateInterests: string[];
+  status: string;
+  match?: { score: number; explanation: string; scoringMethod: string };
+};
+
 type Interest = { id: string; status: string; listing: Listing; tenant: { id: string; name: string; email: string } };
 const money = (n: number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
 
@@ -19,25 +39,551 @@ function Auth({ mode, onAuth }: { mode: "login" | "register"; onAuth: (user: Use
 
 function Profile() {
   const [message, setMessage] = useState("");
-  useEffect(() => { api<Record<string, string | number> | null>("/profile").then(p => { if (!p) return; const form = document.querySelector<HTMLFormElement>("#profile-form")!; Object.entries(p).forEach(([k,v]) => { const field = form.elements.namedItem(k) as HTMLInputElement | null; if (field) field.value = k === "moveInDate" ? String(v).slice(0,10) : String(v); }); }); }, []);
-  async function submit(e: FormEvent<HTMLFormElement>) { e.preventDefault(); const raw = Object.fromEntries(new FormData(e.currentTarget)); await api("/profile", { method: "PUT", body: JSON.stringify({ ...raw, budgetMin: Number(raw.budgetMin), budgetMax: Number(raw.budgetMax) }) }); setMessage("Preferences saved. Your scores will refresh automatically."); }
-  return <Page title="Your preferences" intro="Tell us what a good fit looks like."><form id="profile-form" className="card form grid" onSubmit={submit}><label>Preferred area<input name="preferredLocation" required/></label><label>Minimum budget<input name="budgetMin" type="number" min="0" required/></label><label>Maximum budget<input name="budgetMax" type="number" min="1" required/></label><label>Move-in date<input name="moveInDate" type="date" required/></label><button>Save preferences</button>{message && <p className="success">{message}</p>}</form></Page>;
+  const [interests, setInterests] = useState<string[]>([]);
+  const availableInterests = ["gaming", "music", "cooking", "yoga", "reading", "travel", "movies", "art", "sports", "gym"];
+
+  useEffect(() => {
+    api<any>("/profile").then(p => {
+      if (!p) return;
+      const form = document.querySelector<HTMLFormElement>("#profile-form")!;
+      Object.entries(p).forEach(([k, v]) => {
+        if (k === "interests" && Array.isArray(v)) {
+          setInterests(v);
+          return;
+        }
+        const field = form.elements.namedItem(k) as HTMLInputElement | HTMLSelectElement | null;
+        if (field) {
+          if (field.type === "checkbox") {
+            (field as HTMLInputElement).checked = Boolean(v);
+          } else {
+            field.value = k === "moveInDate" ? String(v).slice(0, 10) : String(v);
+          }
+        }
+      });
+    });
+  }, []);
+
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const raw = Object.fromEntries(new FormData(form));
+    
+    const smoking = form.querySelector<HTMLSelectElement>("[name=smoking]")?.value === "true";
+    const pets = form.querySelector<HTMLSelectElement>("[name=pets]")?.value === "true";
+
+    const body = {
+      ...raw,
+      budgetMin: Number(raw.budgetMin),
+      budgetMax: Number(raw.budgetMax),
+      smoking,
+      pets,
+      interests
+    };
+
+    await api("/profile", {
+      method: "PUT",
+      body: JSON.stringify(body)
+    });
+    setMessage("Preferences saved. Your scores will refresh automatically.");
+  }
+
+  const toggleInterest = (interest: string) => {
+    setInterests(prev => prev.includes(interest) ? prev.filter(x => x !== interest) : [...prev, interest]);
+  };
+
+  return (
+    <Page title="Your preferences" intro="Tell us what a good roommate fit looks like.">
+      <form id="profile-form" className="card form grid" onSubmit={submit}>
+        <h3 className="wide section-title" style={{ gridColumn: "1/-1", margin: "1rem 0 0.5rem", borderBottom: "1px solid var(--line)", paddingBottom: "0.25rem" }}>Basics</h3>
+        <label>Preferred area<input name="preferredLocation" required /></label>
+        <label>Minimum budget<input name="budgetMin" type="number" min="0" required /></label>
+        <label>Maximum budget<input name="budgetMax" type="number" min="1" required /></label>
+        <label>Move-in date<input name="moveInDate" type="date" required /></label>
+        <label>Your Gender
+          <select name="gender" required>
+            <option value="MALE">Male</option>
+            <option value="FEMALE">Female</option>
+            <option value="OTHER">Other</option>
+          </select>
+        </label>
+        <label>Roommate Gender Preference
+          <select name="genderPreference" required>
+            <option value="ANY">Any</option>
+            <option value="MALE">Male</option>
+            <option value="FEMALE">Female</option>
+          </select>
+        </label>
+
+        <h3 className="wide section-title" style={{ gridColumn: "1/-1", margin: "1.5rem 0 0.5rem", borderBottom: "1px solid var(--line)", paddingBottom: "0.25rem" }}>Lifestyle Habits</h3>
+        <label>Do you smoke?
+          <select name="smoking" required>
+            <option value="false">No</option>
+            <option value="true">Yes</option>
+          </select>
+        </label>
+        <label>Do you have pets?
+          <select name="pets" required>
+            <option value="false">No</option>
+            <option value="true">Yes</option>
+          </select>
+        </label>
+        <label>Diet preference
+          <select name="diet" required>
+            <option value="ANY">Any</option>
+            <option value="VEG">Veg only</option>
+            <option value="NON_VEG">Non-veg</option>
+          </select>
+        </label>
+        <label>Sleeping cycle
+          <select name="sleepHabit" required>
+            <option value="ANY">Any</option>
+            <option value="EARLY_BIRD">Early bird</option>
+            <option value="NIGHT_OWL">Night owl</option>
+          </select>
+        </label>
+
+        <div className="wide interests-section" style={{ gridColumn: "1/-1", marginTop: "1.5rem" }}>
+          <h3 style={{ margin: "0 0 0.25rem" }}>Your Hobbies & Interests</h3>
+          <p className="subtext" style={{ fontSize: "0.85rem", color: "#666", margin: "0 0 1rem" }}>Select all that apply to you. We use this to highlight shared interests!</p>
+          <div className="interest-tags" style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+            {availableInterests.map(tag => (
+              <button
+                type="button"
+                key={tag}
+                className={`tag-btn ${interests.includes(tag) ? "active" : ""}`}
+                style={{
+                  background: interests.includes(tag) ? "var(--green)" : "#e6e9df",
+                  color: interests.includes(tag) ? "white" : "var(--ink)",
+                  border: "none",
+                  borderRadius: "20px",
+                  padding: "0.4rem 1rem",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  transition: "all 0.2s"
+                }}
+                onClick={() => toggleInterest(tag)}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <button className="wide" style={{ gridColumn: "1/-1", marginTop: "2rem" }}>Save preferences</button>
+        {message && <p className="success wide" style={{ gridColumn: "1/-1" }}>{message}</p>}
+      </form>
+    </Page>
+  );
 }
 
 function Browse() {
-  const [items, setItems] = useState<Listing[]>([]); const [error, setError] = useState(""); const [loading, setLoading] = useState(true);
-  async function load(query="") { setLoading(true); setError(""); try { setItems(await api(`/listings${query}`)); } catch(e) { setError((e as Error).message); } finally { setLoading(false); } }
+  const [items, setItems] = useState<Listing[]>([]);
+  const [myProfile, setMyProfile] = useState<any>(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  
+  const [locFilter, setLocFilter] = useState("");
+  const [minBudget, setMinBudget] = useState("");
+  const [maxBudget, setMaxBudget] = useState("");
+  const [genderFilter, setGenderFilter] = useState("ALL");
+  const [smokingFilter, setSmokingFilter] = useState("ALL");
+  const [petsFilter, setPetsFilter] = useState("ALL");
+  const [dietFilter, setDietFilter] = useState("ALL");
+  const [furnishingFilter, setFurnishingFilter] = useState("ALL");
+
+  async function load() {
+    setLoading(true);
+    setError("");
+    try {
+      const [listings, profile] = await Promise.all([
+        api<Listing[]>("/listings"),
+        api<any>("/profile").catch(() => null)
+      ]);
+      setItems(listings);
+      setMyProfile(profile);
+    } catch(e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => { void load(); }, []);
-  async function filter(e: FormEvent<HTMLFormElement>) { e.preventDefault(); const params = new URLSearchParams(Object.entries(Object.fromEntries(new FormData(e.currentTarget))).filter(([,v])=>v) as [string,string][]); await load(`?${params}`); }
-  async function interest(id: string) { try { await api("/interests", { method: "POST", body: JSON.stringify({ listingId: id }) }); alert("Interest sent to the owner."); } catch(e) { alert((e as Error).message); } }
-  return <Page title="Find your next place" intro="Ranked for you, with the reasoning made visible."><form className="filters" onSubmit={filter}><input name="location" placeholder="Area or city"/><input name="budgetMin" type="number" placeholder="Min budget"/><input name="budgetMax" type="number" placeholder="Max budget"/><button>Filter</button></form>{error && <div className="notice">{error === "Tenant profile required" ? <>Create your <NavLink to="/profile">tenant profile</NavLink> before browsing.</> : error}</div>}{loading ? <p>Finding compatible rooms…</p> : <div className="cards">{items.map(x=><article className="listing card" key={x.id}>{x.photos[0] && <img src={x.photos[0]} alt=""/>}<div className="score"><strong>{x.match?.score}%</strong><span>{x.match?.scoringMethod === "LLM" ? "AI match" : "Smart match"}</span></div><h2>{x.title}</h2><p className="meta">{x.location} · {x.roomType} · {x.furnishingStatus}</p><p>{x.description}</p><div className="listing-foot"><strong>{money(x.rent)}<small>/month</small></strong><button onClick={()=>interest(x.id)}>I'm interested</button></div><details><summary>Why this score?</summary><p>{x.match?.explanation}</p></details></article>)}</div>}</Page>;
+
+  async function interest(id: string) {
+    try {
+      await api("/interests", { method: "POST", body: JSON.stringify({ listingId: id }) });
+      alert("Interest sent to the owner!");
+    } catch(e) {
+      alert((e as Error).message);
+    }
+  }
+
+  const filteredItems = items.filter(x => {
+    if (locFilter && !x.location.toLowerCase().includes(locFilter.toLowerCase())) return false;
+    if (minBudget && x.rent < Number(minBudget)) return false;
+    if (maxBudget && x.rent > Number(maxBudget)) return false;
+    if (genderFilter !== "ALL" && x.genderPreference !== "ANY" && x.genderPreference !== genderFilter) return false;
+    if (smokingFilter !== "ALL") {
+      const isSmokingAllowed = x.smokingAllowed;
+      if (smokingFilter === "YES" && !isSmokingAllowed) return false;
+      if (smokingFilter === "NO" && isSmokingAllowed) return false;
+    }
+    if (petsFilter !== "ALL") {
+      const isPetsAllowed = x.petsAllowed;
+      if (petsFilter === "YES" && !isPetsAllowed) return false;
+      if (petsFilter === "NO" && isPetsAllowed) return false;
+    }
+    if (dietFilter !== "ALL" && x.dietaryPolicy !== dietFilter) return false;
+    if (furnishingFilter !== "ALL" && !x.furnishingStatus.toLowerCase().includes(furnishingFilter.toLowerCase())) return false;
+    return true;
+  });
+
+  return (
+    <Page title="Find your next place" intro="Ranked for you with deep compatibility details.">
+      <div className="filters-container card" style={{ padding: "1.5rem", marginBottom: "2rem" }}>
+        <h3 style={{ margin: "0 0 1rem" }}>Filter Rooms</h3>
+        <div className="filters-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "1rem" }}>
+          <label>Location
+            <input value={locFilter} onChange={e => setLocFilter(e.target.value)} placeholder="Indiranagar, Koramangala..." />
+          </label>
+          <label>Min Budget
+            <input type="number" value={minBudget} onChange={e => setMinBudget(e.target.value)} placeholder="Min" />
+          </label>
+          <label>Max Budget
+            <input type="number" value={maxBudget} onChange={e => setMaxBudget(e.target.value)} placeholder="Max" />
+          </label>
+          <label>Gender Preference
+            <select value={genderFilter} onChange={e => setGenderFilter(e.target.value)}>
+              <option value="ALL">Any</option>
+              <option value="MALE">Male only</option>
+              <option value="FEMALE">Female only</option>
+            </select>
+          </label>
+          <label>Smoking Allowed?
+            <select value={smokingFilter} onChange={e => setSmokingFilter(e.target.value)}>
+              <option value="ALL">Any</option>
+              <option value="YES">Yes</option>
+              <option value="NO">No</option>
+            </select>
+          </label>
+          <label>Pets Allowed?
+            <select value={petsFilter} onChange={e => setPetsFilter(e.target.value)}>
+              <option value="ALL">Any</option>
+              <option value="YES">Yes</option>
+              <option value="NO">No</option>
+            </select>
+          </label>
+          <label>Dietary Policy
+            <select value={dietFilter} onChange={e => setDietFilter(e.target.value)}>
+              <option value="ALL">Any</option>
+              <option value="NO_RESTRICTIONS">No restrictions</option>
+              <option value="VEG_ONLY">Veg only</option>
+            </select>
+          </label>
+          <label>Furnishing
+            <select value={furnishingFilter} onChange={e => setFurnishingFilter(e.target.value)}>
+              <option value="ALL">Any</option>
+              <option value="fully">Fully furnished</option>
+              <option value="semi">Semi furnished</option>
+              <option value="unfurnished">Unfurnished</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      {error && (
+        <div className="notice">
+          {error === "Tenant profile required" ? (
+            <>Create your <NavLink to="/profile">tenant profile</NavLink> before browsing.</>
+          ) : error}
+        </div>
+      )}
+
+      {loading ? (
+        <p>Finding compatible rooms...</p>
+      ) : filteredItems.length === 0 ? (
+        <p className="no-results" style={{ textAlign: "center", color: "#666", padding: "3rem" }}>No compatible rooms found matching your active filters.</p>
+      ) : (
+        <div className="cards">
+          {filteredItems.map(x => {
+            const score = x.match?.score ?? 0;
+            const scoreClass = score >= 90 ? "high" : score >= 70 ? "medium" : "low";
+            
+            const matchedTags: string[] = [];
+            const mismatchedTags: string[] = [];
+
+            if (myProfile) {
+              if (x.location.toLowerCase() === myProfile.preferredLocation.toLowerCase()) {
+                matchedTags.push("📍 Location matched");
+              }
+              if (x.dietaryPolicy === "VEG_ONLY" && myProfile.diet === "VEG") {
+                matchedTags.push("🥗 Both Vegetarian");
+              } else if (x.dietaryPolicy === "VEG_ONLY" && myProfile.diet === "NON_VEG") {
+                mismatchedTags.push("🥩 Veg-only flat (You eat Non-Veg)");
+              }
+              if (myProfile.smoking && !x.smokingAllowed) {
+                mismatchedTags.push("🚭 Non-smoking flat (You smoke)");
+              } else if (!myProfile.smoking && !x.smokingAllowed) {
+                matchedTags.push("🚭 Non-smoking match");
+              }
+              if (myProfile.pets && x.petsAllowed) {
+                matchedTags.push("🐾 Pet friendly match");
+              } else if (myProfile.pets && !x.petsAllowed) {
+                mismatchedTags.push("🚫 No pets allowed");
+              }
+              if (myProfile.sleepHabit !== "ANY" && x.sleepHabitAllowed !== "ANY") {
+                if (myProfile.sleepHabit === x.sleepHabitAllowed) {
+                  matchedTags.push(`⏰ Both ${myProfile.sleepHabit.toLowerCase().replace('_', ' ')}s`);
+                } else {
+                  mismatchedTags.push(`⏰ Sleep schedule conflict`);
+                }
+              }
+              const shared = (myProfile.interests || []).filter((i: string) => (x.roommateInterests || []).includes(i));
+              shared.forEach((interest: string) => {
+                matchedTags.push(`⭐ Shared interest: ${interest}`);
+              });
+            }
+
+            return (
+              <article className="listing card" key={x.id} style={{ display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                <div>
+                  {x.photos[0] && <img src={x.photos[0]} alt="" />}
+                  
+                  <div className={`score ${scoreClass}`} style={{
+                    background: score >= 90 ? "var(--lime)" : score >= 70 ? "#fff3cd" : "#f8d7da",
+                    border: score >= 90 ? "2px solid var(--green)" : score >= 70 ? "2px solid #ffc107" : "2px solid #dc3545"
+                  }}>
+                    <strong>{score}%</strong>
+                    <span>{x.match?.scoringMethod === "LLM" ? "AI match" : "Smart match"}</span>
+                  </div>
+
+                  <h2>{x.title}</h2>
+                  <p className="meta">{x.location} · {x.roomType} · {x.furnishingStatus}</p>
+                  <p className="description" style={{ margin: "1rem 0" }}>{x.description}</p>
+                  
+                  {x.amenities && x.amenities.length > 0 && (
+                    <div className="amenities-container" style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "1rem" }}>
+                      {x.amenities.map(am => (
+                        <span className="amenity-tag" key={am} style={{ fontSize: "0.75rem", background: "#f0f2eb", padding: "0.2rem 0.6rem", borderRadius: "4px", color: "var(--ink)", fontWeight: 500 }}>{am}</span>
+                      ))}
+                    </div>
+                  )}
+
+                  {myProfile && (matchedTags.length > 0 || mismatchedTags.length > 0) && (
+                    <div className="compatibility-badges" style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "1rem" }}>
+                      {matchedTags.map(tag => (
+                        <span className="comp-tag match" key={tag} style={{ fontSize: "0.75rem", background: "#d4edda", color: "#155724", padding: "0.25rem 0.6rem", borderRadius: "12px", fontWeight: 600 }}>{tag}</span>
+                      ))}
+                      {mismatchedTags.map(tag => (
+                        <span className="comp-tag mismatch" key={tag} style={{ fontSize: "0.75rem", background: "#f8d7da", color: "#721c24", padding: "0.25rem 0.6rem", borderRadius: "12px", fontWeight: 600 }}>{tag}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <div className="listing-foot">
+                    <strong>{money(x.rent)}<small>/month</small></strong>
+                    <button onClick={() => interest(x.id)}>I'm interested</button>
+                  </div>
+
+                  <details style={{ marginTop: "1rem" }}>
+                    <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--green)" }}>Why this score?</summary>
+                    <p className="explanation-text" style={{ fontSize: "0.9rem", color: "#444", padding: "0.5rem 0 0", lineHeight: 1.5 }}>{x.match?.explanation}</p>
+                  </details>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </Page>
+  );
 }
 
 function OwnerListings() {
-  const [items,setItems]=useState<Listing[]>([]); const load=()=>api<Listing[]>("/listings/mine").then(setItems); useEffect(()=>{void load()},[]);
-  async function submit(e: FormEvent<HTMLFormElement>) { e.preventDefault(); const raw=Object.fromEntries(new FormData(e.currentTarget)); await api("/listings",{method:"POST",body:JSON.stringify({...raw,rent:Number(raw.rent),photos:String(raw.photos||"").split(",").map(v=>v.trim()).filter(Boolean)})}); e.currentTarget.reset(); await load(); }
-  async function fill(id:string){await api(`/listings/${id}/fill`,{method:"PATCH"});await load()}
-  return <Page title="Your rooms" intro="Publish availability and manage it from one place."><details className="card create"><summary>Add a room</summary><form className="form grid" onSubmit={submit}><label>Title<input name="title" required/></label><label>Location<input name="location" required/></label><label>Monthly rent<input name="rent" type="number" min="1" required/></label><label>Available from<input name="availableFrom" type="date" required/></label><label>Room type<input name="roomType" placeholder="Single, shared, 1BHK…" required/></label><label>Furnishing<input name="furnishingStatus" placeholder="Full, semi, unfurnished" required/></label><label className="wide">Description<textarea name="description" minLength={10} required/></label><label className="wide">Photo URLs, comma separated<input name="photos"/></label><button>Publish room</button></form></details><div className="cards">{items.map(x=><article className="card listing" key={x.id}><span className={`pill ${x.status.toLowerCase()}`}>{x.status}</span><h2>{x.title}</h2><p>{x.location} · {money(x.rent)}</p>{x.status==="ACTIVE"&&<button className="secondary" onClick={()=>fill(x.id)}>Mark filled</button>}</article>)}</div></Page>;
+  const [items, setItems] = useState<Listing[]>([]);
+  const [amenities, setAmenities] = useState<string[]>([]);
+  const [roommateInterests, setRoommateInterests] = useState<string[]>([]);
+  
+  const availableAmenities = ["Wifi", "AC", "Gym", "Parking", "Kitchen", "Laundry"];
+  const availableInterests = ["gaming", "music", "cooking", "yoga", "reading", "travel", "movies", "art", "sports", "gym"];
+
+  const load = () => api<Listing[]>("/listings/mine").then(setItems);
+  useEffect(() => { void load(); }, []);
+
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const raw = Object.fromEntries(new FormData(form));
+
+    const smokingAllowed = form.querySelector<HTMLSelectElement>("[name=smokingAllowed]")?.value === "true";
+    const petsAllowed = form.querySelector<HTMLSelectElement>("[name=petsAllowed]")?.value === "true";
+
+    const body = {
+      ...raw,
+      rent: Number(raw.rent),
+      photos: String(raw.photos || "").split(",").map(v => v.trim()).filter(Boolean),
+      smokingAllowed,
+      petsAllowed,
+      amenities,
+      roommateInterests
+    };
+
+    await api("/listings", {
+      method: "POST",
+      body: JSON.stringify(body)
+    });
+    
+    form.reset();
+    setAmenities([]);
+    setRoommateInterests([]);
+    await load();
+  }
+
+  async function fill(id: string) {
+    await api(`/listings/${id}/fill`, { method: "PATCH" });
+    await load();
+  }
+
+  const toggleAmenity = (item: string) => {
+    setAmenities(prev => prev.includes(item) ? prev.filter(x => x !== item) : [...prev, item]);
+  };
+
+  const toggleInterest = (item: string) => {
+    setRoommateInterests(prev => prev.includes(item) ? prev.filter(x => x !== item) : [...prev, item]);
+  };
+
+  return (
+    <Page title="Your rooms" intro="Publish availability and manage it from one place.">
+      <details className="card create" style={{ marginBottom: "2rem" }}>
+        <summary style={{ fontSize: "1.2rem", fontWeight: 700, cursor: "pointer" }}>Add a room</summary>
+        <form className="form grid" onSubmit={submit}>
+          <h3 className="wide section-title" style={{ gridColumn: "1/-1", margin: "1rem 0 0.5rem", borderBottom: "1px solid var(--line)", paddingBottom: "0.25rem" }}>Basics</h3>
+          <label>Title<input name="title" required /></label>
+          <label>Location<input name="location" required /></label>
+          <label>Monthly rent (Rs.)<input name="rent" type="number" min="1" required /></label>
+          <label>Available from<input name="availableFrom" type="date" required /></label>
+          <label>Room type<input name="roomType" placeholder="Single room, shared room, 1BHK..." required /></label>
+          <label>Furnishing<input name="furnishingStatus" placeholder="Fully, semi, unfurnished" required /></label>
+          <label className="wide" style={{ gridColumn: "1/-1" }}>Description<textarea name="description" minLength={10} required /></label>
+          <label className="wide" style={{ gridColumn: "1/-1" }}>Photo URLs (comma separated)<input name="photos" /></label>
+
+          <h3 className="wide section-title" style={{ gridColumn: "1/-1", margin: "1.5rem 0 0.5rem", borderBottom: "1px solid var(--line)", paddingBottom: "0.25rem" }}>House Rules & Preferences</h3>
+          <label>Gender Preference
+            <select name="genderPreference" required>
+              <option value="ANY">Any</option>
+              <option value="MALE">Male</option>
+              <option value="FEMALE">Female</option>
+            </select>
+          </label>
+          <label>Smoking Allowed?
+            <select name="smokingAllowed" required>
+              <option value="false">No</option>
+              <option value="true">Yes</option>
+            </select>
+          </label>
+          <label>Pets Allowed?
+            <select name="petsAllowed" required>
+              <option value="false">No</option>
+              <option value="true">Yes</option>
+            </select>
+          </label>
+          <label>Dietary Policy
+            <select name="dietaryPolicy" required>
+              <option value="NO_RESTRICTIONS">No restrictions</option>
+              <option value="VEG_ONLY">Veg only</option>
+            </select>
+          </label>
+          <label>Sleeping Habit Allowed
+            <select name="sleepHabitAllowed" required>
+              <option value="ANY">Any</option>
+              <option value="EARLY_BIRD">Early bird</option>
+              <option value="NIGHT_OWL">Night owl</option>
+            </select>
+          </label>
+
+          <div className="wide section-title" style={{ gridColumn: "1/-1", marginTop: "1.5rem" }}>
+            <h3 style={{ margin: "0 0 0.5rem" }}>Amenities Included</h3>
+            <div className="interest-tags" style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+              {availableAmenities.map(am => (
+                <button
+                  type="button"
+                  key={am}
+                  className={`tag-btn ${amenities.includes(am) ? "active" : ""}`}
+                  style={{
+                    background: amenities.includes(am) ? "var(--green)" : "#e6e9df",
+                    color: amenities.includes(am) ? "white" : "var(--ink)",
+                    border: "none",
+                    borderRadius: "20px",
+                    padding: "0.4rem 1rem",
+                    cursor: "pointer",
+                    fontWeight: 600,
+                    transition: "all 0.2s"
+                  }}
+                  onClick={() => toggleAmenity(am)}
+                >
+                  {am}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="wide section-title" style={{ gridColumn: "1/-1", marginTop: "1.5rem" }}>
+            <h3 style={{ margin: "0 0 0.5rem" }}>Preferred Flatmate Hobbies/Interests</h3>
+            <div className="interest-tags" style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+              {availableInterests.map(tag => (
+                <button
+                  type="button"
+                  key={tag}
+                  className={`tag-btn ${roommateInterests.includes(tag) ? "active" : ""}`}
+                  style={{
+                    background: roommateInterests.includes(tag) ? "var(--green)" : "#e6e9df",
+                    color: roommateInterests.includes(tag) ? "white" : "var(--ink)",
+                    border: "none",
+                    borderRadius: "20px",
+                    padding: "0.4rem 1rem",
+                    cursor: "pointer",
+                    fontWeight: 600,
+                    transition: "all 0.2s"
+                  }}
+                  onClick={() => toggleInterest(tag)}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button className="wide" style={{ gridColumn: "1/-1", marginTop: "2rem" }}>Publish room</button>
+        </form>
+      </details>
+
+      <div className="cards">
+        {items.map(x => (
+          <article className="card listing" key={x.id}>
+            <span className={`pill ${x.status.toLowerCase()}`}>{x.status}</span>
+            {x.photos[0] && <img src={x.photos[0]} alt="" />}
+            <h2>{x.title}</h2>
+            <p className="meta">{x.location} · {x.roomType} · {x.furnishingStatus}</p>
+            <div className="listing-details-summary" style={{ margin: "1rem 0" }}>
+              <span className="detail-tag" style={{ display: "inline-block", background: "#f0f2eb", padding: "0.25rem 0.6rem", borderRadius: "4px", fontSize: "0.85rem", marginRight: "0.5rem" }}>Rent: {money(x.rent)}/mo</span>
+              <span className="detail-tag" style={{ display: "inline-block", background: "#f0f2eb", padding: "0.25rem 0.6rem", borderRadius: "4px", fontSize: "0.85rem" }}>Gender: {x.genderPreference.toLowerCase()}</span>
+              {x.amenities && x.amenities.length > 0 && (
+                <div className="sub-section" style={{ marginTop: "0.8rem", fontSize: "0.9rem" }}>
+                  <strong>Amenities:</strong> {x.amenities.join(", ")}
+                </div>
+              )}
+            </div>
+            {x.status === "ACTIVE" && (
+              <button className="secondary" style={{ width: "100%", marginTop: "0.5rem" }} onClick={() => fill(x.id)}>Mark filled</button>
+            )}
+          </article>
+        ))}
+      </div>
+    </Page>
+  );
 }
 
 function Interests({ user }: { user: User }) {
@@ -48,8 +594,8 @@ function Interests({ user }: { user: User }) {
 
 function Chat() {
   const {id=""}=useParams(); const [messages,setMessages]=useState<Array<{id:string;content:string;createdAt:string;sender:{name:string}}>>([]); const [error,setError]=useState("");
-  useEffect(()=>{api<typeof messages>(`/chat/${id}/messages`).then(setMessages).catch(e=>setError(e.message)); const socket=io({auth:{token:getToken()}}); socket.emit("join_room",{interestId:id}); socket.on("message_received",m=>setMessages(old=>old.some(x=>x.id===m.id)?old:[...old,m])); return()=>{socket.disconnect()};},[id]);
-  function send(e:FormEvent<HTMLFormElement>){e.preventDefault();const form=e.currentTarget;const content=String(new FormData(form).get("content"));const socket=io({auth:{token:getToken()}});socket.emit("join_room",{interestId:id},()=>socket.emit("send_message",{interestId:id,content},(r:{ok:boolean;error?:string})=>{if(r.ok)form.reset();else setError(r.error||"Could not send");socket.disconnect()}));}
+  useEffect(()=>{api<typeof messages>(`/chat/${id}/messages`).then(setMessages).catch(e=>setError(e.message)); const socket=io(API_URL || undefined, {auth:{token:getToken()}}); socket.emit("join_room",{interestId:id}); socket.on("message_received",m=>setMessages(old=>old.some(x=>x.id===m.id)?old:[...old,m])); return()=>{socket.disconnect()};},[id]);
+  function send(e:FormEvent<HTMLFormElement>){e.preventDefault();const form=e.currentTarget;const content=String(new FormData(form).get("content"));const socket=io(API_URL || undefined, {auth:{token:getToken()}});socket.emit("join_room",{interestId:id},()=>socket.emit("send_message",{interestId:id,content},(r:{ok:boolean;error?:string})=>{if(r.ok)form.reset();else setError(r.error||"Could not send");socket.disconnect()}));}
   return <Page title="Conversation" intro="This private chat opened when the interest was accepted.">{error&&<p className="error">{error}</p>}<div className="chat card">{messages.map(m=><div className="message" key={m.id}><strong>{m.sender.name}</strong><p>{m.content}</p><time>{new Date(m.createdAt).toLocaleString()}</time></div>)}</div><form className="composer" onSubmit={send}><input name="content" maxLength={2000} placeholder="Write a message…" required/><button>Send</button></form></Page>;
 }
 

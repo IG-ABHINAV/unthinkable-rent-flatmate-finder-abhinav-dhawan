@@ -9,10 +9,21 @@ import { scoreListing } from "../services/scoring.js";
 export const listingsRouter = Router();
 listingsRouter.use(requireAuth);
 const inputSchema = z.object({
-  title: z.string().trim().min(3).max(120), description: z.string().trim().min(10).max(3000),
-  location: z.string().trim().min(2).max(120), rent: z.number().int().positive(), availableFrom: z.coerce.date(),
-  roomType: z.string().trim().min(2).max(40), furnishingStatus: z.string().trim().min(2).max(40),
-  photos: z.array(z.string().url()).max(10).default([])
+  title: z.string().trim().min(3).max(120),
+  description: z.string().trim().min(10).max(3000),
+  location: z.string().trim().min(2).max(120),
+  rent: z.number().int().positive(),
+  availableFrom: z.coerce.date(),
+  roomType: z.string().trim().min(2).max(40),
+  furnishingStatus: z.string().trim().min(2).max(40),
+  photos: z.array(z.string().url()).max(10).default([]),
+  genderPreference: z.string().trim().default("ANY"),
+  smokingAllowed: z.boolean().default(false),
+  petsAllowed: z.boolean().default(false),
+  dietaryPolicy: z.string().trim().default("NO_RESTRICTIONS"),
+  sleepHabitAllowed: z.string().trim().default("ANY"),
+  amenities: z.array(z.string()).default([]),
+  roommateInterests: z.array(z.string()).default([])
 });
 
 listingsRouter.get("/mine", requireRole(Role.OWNER), asyncRoute(async (req, res) => {

@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: rentfinder
+      POSTGRES_USER: rentfinder
+      POSTGRES_PASSWORD: change-this-database-password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rentfinder -d rentfinder"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://rentfinder:change-this-database-password@db:5432/rentfinder
+      JWT_SECRET: change-this-to-at-least-32-random-characters-long
+      CORS_ORIGIN: http://localhost
+      LLM_API_KEY: sk-er_e89f69e5_e86665b5dc3d9844ce8c3eff4902c0d6b0593ffde6854b2f
+      LLM_MODEL: gpt-4o-mini
+      SMTP_HOST: mail
+      SMTP_PORT: 587
+      SMTP_FROM: Rent Finder <noreply@example.com>
+      APP_URL: http://localhost
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  pgdata:

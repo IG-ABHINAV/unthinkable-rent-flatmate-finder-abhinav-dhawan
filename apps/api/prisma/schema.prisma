@@ -59,25 +59,39 @@ model TenantProfile {
   budgetMin         Int
   budgetMax         Int
   moveInDate        DateTime @db.Date
+  gender            String   @default("ANY")
+  genderPreference  String   @default("ANY")
+  smoking           Boolean  @default(false)
+  pets              Boolean  @default(false)
+  diet              String   @default("ANY")
+  sleepHabit        String   @default("ANY")
+  interests         String[] @default([])
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Listing {
-  id               String        @id @default(uuid()) @db.Uuid
-  ownerId          String        @db.Uuid
-  title            String
-  description      String
-  location         String
-  rent             Int
-  availableFrom    DateTime      @db.Date
-  roomType         String
-  furnishingStatus String
-  photos           String[]
-  status           ListingStatus @default(ACTIVE)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  id                String        @id @default(uuid()) @db.Uuid
+  ownerId           String        @db.Uuid
+  title             String
+  description       String
+  location          String
+  rent              Int
+  availableFrom     DateTime      @db.Date
+  roomType          String
+  furnishingStatus  String
+  photos            String[]
+  genderPreference  String        @default("ANY")
+  smokingAllowed    Boolean       @default(false)
+  petsAllowed       Boolean       @default(false)
+  dietaryPolicy     String        @default("NO_RESTRICTIONS")
+  sleepHabitAllowed String        @default("ANY")
+  amenities         String[]      @default([])
+  roommateInterests String[]      @default([])
+  status            ListingStatus @default(ACTIVE)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
   owner             User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   matches           Match[]
   interests         Interest[]

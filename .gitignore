@@ -10,3 +10,9 @@ tmp/
 .vscode/
 .idea/
 .DS_Store
+
+# Local development scripts & database data
+start-local.ps1
+stop-local.ps1
+.database_data/
+

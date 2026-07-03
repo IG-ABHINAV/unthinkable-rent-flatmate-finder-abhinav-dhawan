@@ -7,7 +7,19 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
 
 export const profileRouter = Router();
 profileRouter.use(requireAuth, requireRole(Role.TENANT));
-const schema = z.object({ preferredLocation: z.string().trim().min(2).max(120), budgetMin: z.number().int().nonnegative(), budgetMax: z.number().int().positive(), moveInDate: z.coerce.date() }).refine(v => v.budgetMax >= v.budgetMin, { message: "Maximum budget must be at least minimum budget", path: ["budgetMax"] });
+const schema = z.object({
+  preferredLocation: z.string().trim().min(2).max(120),
+  budgetMin: z.number().int().nonnegative(),
+  budgetMax: z.number().int().positive(),
+  moveInDate: z.coerce.date(),
+  gender: z.string().trim().default("ANY"),
+  genderPreference: z.string().trim().default("ANY"),
+  smoking: z.boolean().default(false),
+  pets: z.boolean().default(false),
+  diet: z.string().trim().default("ANY"),
+  sleepHabit: z.string().trim().default("ANY"),
+  interests: z.array(z.string()).default([])
+}).refine(v => v.budgetMax >= v.budgetMin, { message: "Maximum budget must be at least minimum budget", path: ["budgetMax"] });
 
 profileRouter.get("/", asyncRoute(async (req, res) => res.json(await db.tenantProfile.findUnique({ where: { userId: req.user!.id } }))));
 profileRouter.put("/", asyncRoute(async (req, res) => {
