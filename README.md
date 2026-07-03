@@ -4,6 +4,16 @@ An AI-powered room and flatmate matching platform. Roomly connects owners listin
 
 ---
 
+## 📚 Dedicated Documentation Files
+
+- 🚀 **[SYSTEM_DESIGN.md](./SYSTEM_DESIGN.md)** — Comprehensive System Architecture, Compatibility Engine Design, Chat Architecture & Notification Flow Write-up (≤ 800 words).
+- 🔌 **[API_DOCUMENTATION.md](./API_DOCUMENTATION.md)** — Full REST API Endpoints Reference, Query Parameters, Headers, Auth Rules & Socket.IO Events.
+- 🗄️ **[DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md)** — Relational PostgreSQL Schema (Prisma Models, Attributes, Foreign Keys & Indexes).
+- 🤖 **[LLM_PROMPT_GUIDE.md](./LLM_PROMPT_GUIDE.md)** — AI Prompt Templates, System Instructions, Response JSON Schema & Fallback Scoring Logic.
+
+---
+
+
 ## 🔗 Live Application Links
 
 - **🌐 Live Frontend (Vercel)**: [https://unthinkable-rent-flatmate-finder-abhinav-dhawan.vercel.app](https://unthinkable-rent-flatmate-finder-abhinav-dhawan.vercel.app)
