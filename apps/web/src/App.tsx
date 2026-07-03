@@ -24,7 +24,7 @@ type Listing = {
   match?: { score: number; explanation: string; scoringMethod: string };
 };
 
-type Interest = { id: string; status: string; listing: Listing; tenant: { id: string; name: string; email: string } };
+type Interest = { id: string; status: string; listing: Listing; tenant: { id: string; name: string; email: string }; message?: string; moveInDate?: string; stayDuration?: number; quickNotes?: string[] };
 const money = (n: number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
 
 function Auth({ mode, onAuth }: { mode: "login" | "register"; onAuth: (user: User) => void }) {
@@ -190,7 +190,7 @@ function Auth({ mode, onAuth }: { mode: "login" | "register"; onAuth: (user: Use
 function Profile() {
   const [message, setMessage] = useState("");
   const [interests, setInterests] = useState<string[]>([]);
-  const availableInterests = ["gaming", "music", "cooking", "yoga", "reading", "travel", "movies", "art", "sports", "gym"];
+  const availableInterests = ["gaming", "music", "cooking", "yoga", "reading", "travel", "movies", "art", "sports", "gym", "coding", "gardening", "photography", "pets", "hiking", "fitness", "dancing", "podcasts"];
 
   useEffect(() => {
     api<any>("/profile").then(p => {
@@ -341,12 +341,18 @@ function Browse() {
   const [dietFilter, setDietFilter] = useState("ALL");
   const [furnishingFilter, setFurnishingFilter] = useState("ALL");
 
-  async function load() {
+  async function load(location = "", budgetMin = "", budgetMax = "") {
     setLoading(true);
     setError("");
     try {
+      const queryParams = new URLSearchParams();
+      if (location) queryParams.set("location", location.trim());
+      if (budgetMin) queryParams.set("budgetMin", budgetMin);
+      if (budgetMax) queryParams.set("budgetMax", budgetMax);
+      
+      const queryString = queryParams.toString() ? `?${queryParams.toString()}` : "";
       const [listings, profile] = await Promise.all([
-        api<Listing[]>("/listings"),
+        api<Listing[]>(`/listings${queryString}`),
         api<any>("/profile").catch(() => null)
       ]);
       setItems(listings);
@@ -358,21 +364,50 @@ function Browse() {
     }
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => { void load(locFilter, minBudget, maxBudget); }, []);
 
-  async function interest(id: string) {
+  const [interestModalListingId, setInterestModalListingId] = useState<string | null>(null);
+  const [interestMessage, setInterestMessage] = useState("");
+  const [interestMoveInDate, setInterestMoveInDate] = useState("");
+  const [interestStayDuration, setInterestStayDuration] = useState("");
+  const [interestQuickNotes, setInterestQuickNotes] = useState<string[]>([]);
+
+  const quickNotesOptions = [
+    "Ready to move in immediately",
+    "Quiet & clean flatmate",
+    "Open to shared chores",
+    "Pet lover",
+    "Vegetarian friendly",
+    "Non-smoker",
+    "Okay with late night study/work"
+  ];
+
+  async function submitInterest(e: React.FormEvent) {
+    e.preventDefault();
+    if (!interestModalListingId) return;
     try {
-      await api("/interests", { method: "POST", body: JSON.stringify({ listingId: id }) });
+      await api("/interests", {
+        method: "POST",
+        body: JSON.stringify({
+          listingId: interestModalListingId,
+          message: interestMessage || undefined,
+          moveInDate: interestMoveInDate || undefined,
+          stayDuration: interestStayDuration ? Number(interestStayDuration) : undefined,
+          quickNotes: interestQuickNotes
+        })
+      });
       alert("Interest sent to the owner!");
+      setInterestModalListingId(null);
+      setInterestMessage("");
+      setInterestMoveInDate("");
+      setInterestStayDuration("");
+      setInterestQuickNotes([]);
     } catch(e) {
       alert((e as Error).message);
     }
   }
 
   const filteredItems = items.filter(x => {
-    if (locFilter && !x.location.toLowerCase().includes(locFilter.toLowerCase())) return false;
-    if (minBudget && x.rent < Number(minBudget)) return false;
-    if (maxBudget && x.rent > Number(maxBudget)) return false;
     if (genderFilter !== "ALL" && x.genderPreference !== "ANY" && x.genderPreference !== genderFilter) return false;
     if (smokingFilter !== "ALL") {
       const isSmokingAllowed = x.smokingAllowed;
@@ -436,9 +471,17 @@ function Browse() {
               <option value="ALL">Any</option>
               <option value="fully">Fully furnished</option>
               <option value="semi">Semi furnished</option>
-              <option value="unfurnished">Unfurnished</option>
             </select>
           </label>
+        </div>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: "1rem", marginTop: "1.5rem" }}>
+          <button className="secondary" onClick={() => {
+            setLocFilter("");
+            setMinBudget("");
+            setMaxBudget("");
+            void load("", "", "");
+          }}>Clear Search</button>
+          <button onClick={() => void load(locFilter, minBudget, maxBudget)} style={{ background: "var(--green)", color: "white" }}>Search</button>
         </div>
       </div>
 
@@ -535,7 +578,7 @@ function Browse() {
                 <div>
                   <div className="listing-foot">
                     <strong>{money(x.rent)}<small>/month</small></strong>
-                    <button onClick={() => interest(x.id)}>I'm interested</button>
+                    <button onClick={() => setInterestModalListingId(x.id)}>I'm interested</button>
                   </div>
 
                   <details style={{ marginTop: "1rem" }}>
@@ -548,6 +591,99 @@ function Browse() {
           })}
         </div>
       )}
+
+      {interestModalListingId && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.6)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+          padding: "1rem",
+          backdropFilter: "blur(4px)"
+        }}>
+          <div className="card" style={{
+            background: "white",
+            width: "100%",
+            maxWidth: "500px",
+            padding: "2rem",
+            borderRadius: "12px",
+            boxShadow: "0 8px 30px rgba(0,0,0,0.15)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "1.5rem",
+            maxHeight: "90vh",
+            overflowY: "auto",
+            position: "relative"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #eee", paddingBottom: "1rem" }}>
+              <h2 style={{ margin: 0, fontSize: "1.5rem" }}>Express Interest</h2>
+              <button className="ghost" onClick={() => setInterestModalListingId(null)} style={{ fontSize: "1.75rem", padding: 0, lineHeight: 1, cursor: "pointer", border: "none", background: "none" }}>&times;</button>
+            </div>
+            
+            <form onSubmit={submitInterest} style={{ display: "flex", flexDirection: "column", gap: "1.2rem" }}>
+              <label style={{ display: "flex", flexDirection: "column", gap: "0.4rem", fontWeight: 600 }}>
+                Proposed Move-in Date
+                <input type="date" value={interestMoveInDate} onChange={e => setInterestMoveInDate(e.target.value)} required style={{ padding: "0.5rem", borderRadius: "6px", border: "1px solid #ccc" }} />
+              </label>
+              
+              <label style={{ display: "flex", flexDirection: "column", gap: "0.4rem", fontWeight: 600 }}>
+                Proposed Duration (Months)
+                <input type="number" min="1" placeholder="e.g. 12" value={interestStayDuration} onChange={e => setInterestStayDuration(e.target.value)} required style={{ padding: "0.5rem", borderRadius: "6px", border: "1px solid #ccc" }} />
+              </label>
+              
+              <div>
+                <span style={{ fontSize: "0.9rem", fontWeight: 600, display: "block", marginBottom: "0.5rem" }}>Quick Highlights</span>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                  {quickNotesOptions.map(note => {
+                    const active = interestQuickNotes.includes(note);
+                    return (
+                      <button
+                        type="button"
+                        key={note}
+                        onClick={() => setInterestQuickNotes(prev => prev.includes(note) ? prev.filter(x => x !== note) : [...prev, note])}
+                        style={{
+                          fontSize: "0.75rem",
+                          padding: "0.3rem 0.7rem",
+                          borderRadius: "20px",
+                          border: "1px solid " + (active ? "var(--green)" : "#ccc"),
+                          background: active ? "var(--green)" : "#f0f2eb",
+                          color: active ? "white" : "var(--ink)",
+                          cursor: "pointer",
+                          transition: "all 0.2s"
+                        }}
+                      >
+                        {note}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <label style={{ display: "flex", flexDirection: "column", gap: "0.4rem", fontWeight: 600 }}>
+                Personal Message
+                <textarea
+                  placeholder="Introduce yourself to the owner..."
+                  value={interestMessage}
+                  onChange={e => setInterestMessage(e.target.value)}
+                  style={{ minHeight: "100px", resize: "vertical", width: "100%", padding: "0.5rem", borderRadius: "6px", border: "1px solid #ccc", boxSizing: "border-box" }}
+                  maxLength={1000}
+                />
+              </label>
+              
+              <div style={{ display: "flex", gap: "1rem", marginTop: "1rem", borderTop: "1px solid #eee", paddingTop: "1.2rem" }}>
+                <button type="button" className="secondary" onClick={() => setInterestModalListingId(null)} style={{ flex: 1 }}>Cancel</button>
+                <button type="submit" style={{ flex: 1, background: "var(--green)", color: "white" }}>Send Request</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </Page>
   );
 }
@@ -558,7 +694,7 @@ function OwnerListings() {
   const [roommateInterests, setRoommateInterests] = useState<string[]>([]);
   
   const availableAmenities = ["Wifi", "AC", "Gym", "Parking", "Kitchen", "Laundry"];
-  const availableInterests = ["gaming", "music", "cooking", "yoga", "reading", "travel", "movies", "art", "sports", "gym"];
+  const availableInterests = ["gaming", "music", "cooking", "yoga", "reading", "travel", "movies", "art", "sports", "gym", "coding", "gardening", "photography", "pets", "hiking", "fitness", "dancing", "podcasts"];
 
   const load = () => api<Listing[]>("/listings/mine").then(setItems);
   useEffect(() => { void load(); }, []);
@@ -737,9 +873,86 @@ function OwnerListings() {
 }
 
 function Interests({ user }: { user: User }) {
-  const [items,setItems]=useState<Interest[]>([]); const load=()=>api<Interest[]>("/interests/mine").then(setItems); useEffect(()=>{void load()},[]);
-  async function answer(id:string,status:string){await api(`/interests/${id}`,{method:"PATCH",body:JSON.stringify({status})});await load()}
-  return <Page title="Interests" intro={user.role==="OWNER"?"Review people who like your rooms.":"Track your requests and accepted chats."}><div className="stack">{items.map(x=><article className="card interest" key={x.id}><div><span className={`pill ${x.status.toLowerCase()}`}>{x.status}</span><h2>{x.listing.title}</h2><p>{user.role==="OWNER"?`${x.tenant.name} · ${x.tenant.email}`:x.listing.location}</p></div><div className="actions">{user.role==="OWNER"&&x.status==="PENDING"&&<><button onClick={()=>answer(x.id,"ACCEPTED")}>Accept</button><button className="secondary" onClick={()=>answer(x.id,"DECLINED")}>Decline</button></>}{x.status==="ACCEPTED"&&<NavLink className="button" to={`/chat/${x.id}`}>Open chat</NavLink>}</div></article>)}</div></Page>;
+  const [items, setItems] = useState<Interest[]>([]);
+  const load = () => api<Interest[]>("/interests/mine").then(setItems);
+  useEffect(() => { void load(); }, []);
+
+  async function answer(id: string, status: string) {
+    await api(`/interests/${id}`, { method: "PATCH", body: JSON.stringify({ status }) });
+    await load();
+  }
+
+  return (
+    <Page
+      title="Interests"
+      intro={user.role === "OWNER" ? "Review people who like your rooms." : "Track your requests and accepted chats."}
+    >
+      <div className="stack" style={{ gap: "1.5rem" }}>
+        {items.length === 0 ? (
+          <p style={{ color: "#666", fontStyle: "italic" }}>No interest requests found yet.</p>
+        ) : (
+          items.map(x => (
+            <article className="card interest" key={x.id} style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "1.5rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
+                <div>
+                  <span className={`pill ${x.status.toLowerCase()}`} style={{ display: "inline-block", marginBottom: "0.5rem" }}>
+                    {x.status}
+                  </span>
+                  <h2 style={{ margin: "0 0 0.25rem", fontSize: "1.3rem" }}>{x.listing.title}</h2>
+                  <p style={{ color: "#666", margin: 0, fontSize: "0.9rem" }}>
+                    {user.role === "OWNER" ? (
+                      <strong>Applicant: {x.tenant.name} ({x.tenant.email})</strong>
+                    ) : (
+                      <span>Location: {x.listing.location}</span>
+                    )}
+                  </p>
+                </div>
+                <div className="actions" style={{ display: "flex", gap: "0.5rem" }}>
+                  {user.role === "OWNER" && x.status === "PENDING" && (
+                    <>
+                      <button onClick={() => answer(x.id, "ACCEPTED")} style={{ background: "var(--green)", color: "white" }}>Accept</button>
+                      <button className="secondary" onClick={() => answer(x.id, "DECLINED")}>Decline</button>
+                    </>
+                  )}
+                  {x.status === "ACCEPTED" && (
+                    <NavLink className="button" to={`/chat/${x.id}`} style={{ background: "var(--green)", color: "white" }}>Open chat</NavLink>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ background: "#f8f9f6", padding: "1rem", borderRadius: "8px", fontSize: "0.9rem", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.8rem", border: "1px solid #eef0ea" }}>
+                <div>
+                  <strong>Proposed Move-in:</strong> {x.moveInDate ? new Date(x.moveInDate).toLocaleDateString() : "Not specified"}
+                </div>
+                <div>
+                  <strong>Stay Duration:</strong> {x.stayDuration ? `${x.stayDuration} months` : "Not specified"}
+                </div>
+              </div>
+
+              {x.quickNotes && x.quickNotes.length > 0 && (
+                <div>
+                  <strong style={{ fontSize: "0.85rem", color: "#555", display: "block", marginBottom: "0.4rem" }}>Highlights:</strong>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+                    {x.quickNotes.map(note => (
+                      <span key={note} style={{ fontSize: "0.75rem", background: "#e8ede4", color: "var(--ink)", padding: "0.2rem 0.6rem", borderRadius: "12px", fontWeight: 500 }}>
+                        {note}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {x.message && (
+                <div style={{ borderLeft: "3px solid var(--green)", paddingLeft: "1rem", margin: "0.5rem 0 0", fontStyle: "italic", color: "#444", fontSize: "0.95rem", lineHeight: 1.5 }}>
+                  "{x.message}"
+                </div>
+              )}
+            </article>
+          ))
+        )}
+      </div>
+    </Page>
+  );
 }
 
 function Chat() {

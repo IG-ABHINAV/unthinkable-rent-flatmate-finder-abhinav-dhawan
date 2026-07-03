@@ -18,13 +18,33 @@ async function notify(userId: string, type: NotificationType, payload: Record<st
 }
 
 interestsRouter.post("/", requireRole(Role.TENANT), asyncRoute(async (req, res) => {
-  const { listingId } = z.object({ listingId: z.string().uuid() }).parse(req.body);
+  const { listingId, message, moveInDate, stayDuration, quickNotes } = z.object({
+    listingId: z.string().uuid(),
+    message: z.string().trim().max(1000).optional(),
+    moveInDate: z.coerce.date().optional(),
+    stayDuration: z.number().int().positive().optional(),
+    quickNotes: z.array(z.string()).default([])
+  }).parse(req.body);
   const listing = await db.listing.findUnique({ where: { id: listingId }, include: { owner: true } });
   if (!listing || listing.status !== "ACTIVE") throw new HttpError(404, "Active listing not found");
   const match = await scoreListing(req.user!.id, listingId);
   let interest;
-  try { interest = await db.interest.create({ data: { tenantId: req.user!.id, listingId } }); }
-  catch { throw new HttpError(409, "Interest already sent"); }
+  try {
+    interest = await db.interest.create({
+      data: {
+        tenantId: req.user!.id,
+        listingId,
+        message,
+        moveInDate,
+        stayDuration,
+        quickNotes
+      }
+    });
+  }
+  catch (e) {
+    console.error("Interest creation failed:", e);
+    throw new HttpError(409, "Interest already sent");
+  }
   if (match.score > 80) await notify(listing.ownerId, "HIGH_MATCH_INTEREST", { listingId, interestId: interest.id, score: match.score }, "New high-compatibility tenant", `A tenant with a ${match.score}% compatibility score is interested in ${listing.title}.`);
   res.status(201).json(interest);
 }));

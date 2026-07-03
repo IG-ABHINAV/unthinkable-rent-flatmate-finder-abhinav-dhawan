@@ -119,6 +119,10 @@ model Interest {
   tenantId    String         @db.Uuid
   listingId   String         @db.Uuid
   status      InterestStatus @default(PENDING)
+  message     String?
+  moveInDate  DateTime?      @db.Date
+  stayDuration Int?
+  quickNotes  String[]       @default([])
   createdAt   DateTime       @default(now())
   respondedAt DateTime?
   tenant      User           @relation("TenantInterests", fields: [tenantId], references: [id], onDelete: Cascade)
