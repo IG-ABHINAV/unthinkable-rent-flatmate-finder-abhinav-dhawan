@@ -13,7 +13,18 @@ import { profileRouter } from "./routes/profile.js";
 export const app = express();
 app.set("trust proxy", 1);
 app.use(helmet());
-app.use(cors({ origin: config.CORS_ORIGIN.split(","), credentials: true }));
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const allowed = config.CORS_ORIGIN.split(",");
+    if (allowed.includes("*") || allowed.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true
+}));
 app.use(express.json({ limit: "1mb" }));
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 app.use("/api/auth", authRouter);
