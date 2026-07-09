@@ -5,12 +5,15 @@ import { config } from "./config.js";
 import { db } from "./db.js";
 import { createSocketServer } from "./socket.js";
 
+import fs from "node:fs";
+
 async function start() {
   try {
     const listingCount = await db.listing.count();
     if (listingCount === 0) {
       console.log("No listings found. Seeding database automatically...");
-      execSync("npx tsx apps/api/prisma/seed.ts", { stdio: "inherit" });
+      const seedPath = fs.existsSync("prisma/seed.ts") ? "prisma/seed.ts" : "apps/api/prisma/seed.ts";
+      execSync(`npx -y tsx ${seedPath}`, { stdio: "inherit" });
       console.log("Seeding complete.");
     } else {
       console.log(`Database has ${listingCount} listings. Skipping seeding.`);
@@ -18,6 +21,7 @@ async function start() {
   } catch (error) {
     console.error("Database bootstrap check/seed failed:", error);
   }
+
 
   const server = createServer(app);
   createSocketServer(server);
